@@ -15,15 +15,16 @@ AUTH = (NEO4J_USERNAME, NEO4J_PASSWORD)
 
 driver = GraphDatabase.driver(NEO4J_URI, auth=AUTH)
 
+
 def setup_neo4j_connection():
 
     try:
-        driver.verify_connectivity();
-        print("Connected to Neo4j successfully!");
+        driver.verify_connectivity()
+        print("Connected to Neo4j successfully!")
     except DriverError as e:
         print("Error connecting to Neo4j:", e)
 
-    
+
 def create_entities(tx):
 
     # Domain/Scope : Scientists
@@ -41,26 +42,25 @@ def create_entities(tx):
 
 def create_relationships(tx, entity1, entity2, relationship_type):
 
-    #Not using label will cause a huge search across all nodes, so its very inefficient
+    # Not using label will cause a huge search across all nodes, so its very inefficient
     tx.run(f"""
         MATCH (a {{name: '{entity1}'}}), (b {{name: '{entity2}'}})
         MERGE (a)-[r:{relationship_type}]->(b)
     """)
 
 
-def query_graph(cypher_query):
+def query_graph(cypher_query, params=None):
 
     try:
+        # Good for oneoff runs, sessions are better for multiple queries
+        records, summary, keys = driver.execute_query(
+            cypher_query, parameters_=params or {}, database_=NEO4J_DATABASE
+        )
 
-        result = driver.execute_query(cypher_query, database_=NEO4J_DATABASE)
-
-        print("Query Results:")
-
-        for record in result[0]:
+        for record in records:
             print(record.get("name"))
     except Exception as e:
         print("Error connecting to Neo4j:", e)
-
 
 
 def build_knowledge_graph():
@@ -70,12 +70,12 @@ def build_knowledge_graph():
     try:
         with driver.session(database=NEO4J_DATABASE) as session:
             session.execute_write(create_entities)
+
     except DriverError as e:
         print("Error creating entities:", e)
-    
 
 
 if __name__ == "__main__":
-    
-     build_knowledge_graph()
-     query_graph("MATCH (n) RETURN n.name AS name")
+
+    #  build_knowledge_graph()
+    query_graph("MATCH (n) RETURN n.name AS name")
